@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ThreatLens Cyber Threat Intelligence Dashboard">
+  <title>ThreatLens | Cyber Threat Intelligence</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">T</span><div><strong>ThreatLens</strong><small>CYBER INTELLIGENCE</small></div></div>
+    <p class="sidebar-label">WORKSPACE</p>
+    <nav>
+      <a class="nav active" href="#top">Overview</a>
+      <a class="nav" href="#analytics">Analytics</a>
+      <a class="nav" href="#indicators">Threat Indicators</a>
+      <a class="nav" href="#feeds">Intelligence Feeds</a>
+      <a class="nav" href="#operations">SOC Operations</a>\n      <a class="nav" href="#governance">Audit Trail</a>
+    </nav>
+    <div class="side-bottom"><span class="status-dot"></span> API service<br><small>Local intelligence console</small></div>
+  </aside>
+
+  <main class="main" id="top">
+    <header class="topbar">
+      <div><p class="eyebrow">THREAT INTELLIGENCE / OVERVIEW</p><h1>Security Dashboard</h1><p class="muted">Monitor, investigate and manage indicators of compromise.</p></div>
+      <div class="header-actions"><span class="api-status" id="apiStatus">Checking API…</span><button class="secondary" id="refreshBtn">↻ Refresh</button></div>
+    </header>
+
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+
+    <section class="stats">
+      <article class="stat-card"><div class="stat-top"><span>Total Indicators</span><span class="stat-icon">◎</span></div><strong id="total">—</strong><small>Canonical IOC records</small></article>
+      <article class="stat-card"><div class="stat-top"><span>Critical / High</span><span class="stat-icon danger">!</span></div><strong id="high">—</strong><small>Priority for analyst triage</small></article>
+      <article class="stat-card"><div class="stat-top"><span>Medium</span><span class="stat-icon warning">◈</span></div><strong id="medium">—</strong><small>Moderate severity</small></article>
+      <article class="stat-card"><div class="stat-top"><span>Low</span><span class="stat-icon success">✓</span></div><strong id="low">—</strong><small>Lower severity</small></article>
+    </section>
+
+    <section id="analytics" class="section">
+      <div class="section-heading"><div><p class="eyebrow">INTELLIGENCE OVERVIEW</p><h2>Threat Analytics</h2></div><span class="live-label">LIVE DATABASE VIEW</span></div>
+      <div class="analytics-grid">
+        <article class="panel"><h3>Severity Distribution</h3><p class="muted">IOC count by severity level</p><div class="chart-box"><canvas id="severityChart"></canvas></div></article>
+        <article class="panel"><h3>Indicator Categories</h3><p class="muted">Distribution across supported IOC types</p><div class="chart-box"><canvas id="typeChart"></canvas></div></article>
+        <article class="panel recent-panel"><h3>Recent Threat Activity</h3><p class="muted">Latest records added to the intelligence store</p><div id="recentActivity" class="activity-list">Loading activity…</div></article>
+      </div>
+    </section>
+
+    <section class="panel" id="feeds">
+      <div class="section-heading"><div><p class="eyebrow">EXTERNAL INTELLIGENCE</p><h2>Threat Intelligence Feeds</h2><p class="muted">Six source connectors: five public feeds and one API-key connector.</p></div><div class="header-actions"><select id="feedSelect" aria-label="Select intelligence feed"></select><button id="syncFeedBtn">↻ Sync Selected Feed</button></div></div><div id="feedCatalog" class="feed-catalog"></div>
+      <div id="feedStatus" class="muted" role="status"></div>
+      <div id="feedResults" class="feed-results" hidden>
+        <div><small>Fetched</small><strong id="feedFetched">0</strong></div>
+        <div><small>Added</small><strong id="feedAdded">0</strong></div>
+        <div><small>Duplicates</small><strong id="feedDuplicates">0</strong></div>
+        <div><small>Invalid</small><strong id="feedInvalid">0</strong></div>
+      </div>
+      <div class="subsection"><div class="section-heading compact"><div><h3>Synchronization History</h3><p id="lastSync" class="muted">Last sync: Not available</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Feed</th><th>Status</th><th>Fetched</th><th>Added</th><th>Duplicates</th><th>Date</th></tr></thead><tbody id="feedHistory"><tr><td colspan="6">Loading history…</td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section class="panel" id="indicators">
+      <div class="section-heading"><div><p class="eyebrow">IOC LIFECYCLE</p><h2>Threat Indicators</h2><p class="muted">Create, review, update and remove canonical IOC records.</p></div><div class="header-actions"><button class="secondary" id="exportBtn">↓ Export CSV</button><button class="secondary" id="stixBtn">↓ Export STIX 2.1</button></div></div>
+
+      <div class="subsection">
+        <h3>Add New Indicator</h3>
+        <form id="addForm" class="form-grid">
+          <label class="field span-2">Indicator value<input id="indicator" placeholder="IP, domain, URL, hash, email or CVE" maxlength="500" required></label>
+          <label class="field">Type<select id="indicatorType" required><option value="ip">IP Address</option><option value="domain">Domain</option><option value="url">URL</option><option value="hash">File Hash</option><option value="email">Email</option><option value="cve">CVE</option></select></label>
+          <label class="field">Severity<select id="indicatorSeverity"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+          <label class="field">Confidence (0–100)<input id="confidence" type="number" min="0" max="100" value="50" required></label>
+          <label class="field">TLP Classification<select id="tlp"><option value="clear">Clear</option><option value="green">Green</option><option value="amber">Amber</option><option value="red">Red</option></select></label>
+          <label class="field">Lifecycle Status<select id="iocStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="false_positive">False Positive</option></select></label>
+          <label class="field">Tags (JSON array)<input id="tags" value="[]" placeholder='["malware","botnet"]'></label>
+          <label class="field">MITRE ATT&CK IDs (JSON array)<input id="attackTechniques" value="[]" placeholder='["T1059"]'></label>
+          <label class="field span-2">Analyst Notes<textarea id="analystNotes" rows="2" placeholder="Add investigation context or notes"></textarea></label>
+          <div class="form-actions span-2"><button type="submit">+ Add Indicator</button></div>
+        </form>
+      </div>
+
+      <div class="subsection">
+        <div class="section-heading compact"><div><h3>Search & Filter</h3><p class="muted">Filter records by value, category, severity, status or TLP.</p></div><span id="count" class="muted"></span></div>
+        <form id="filterForm" class="filters">
+          <input id="search" placeholder="Search indicators or notes">
+          <select id="type"><option value="">All types</option><option value="ip">IP</option><option value="domain">Domain</option><option value="url">URL</option><option value="hash">Hash</option><option value="email">Email</option><option value="cve">CVE</option></select>
+          <select id="severity"><option value="">All severity</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+          <select id="status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="false_positive">False Positive</option></select>
+          <select id="filterTlp"><option value="">All TLP</option><option value="clear">Clear</option><option value="green">Green</option><option value="amber">Amber</option><option value="red">Red</option></select>
+          <button type="submit">Apply</button><button type="button" class="secondary" id="clearBtn">Clear</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>Indicator</th><th>Type</th><th>Severity</th><th>Score</th><th>Source</th><th>Confidence</th><th>TLP</th><th>Status</th><th>Actions</th></tr></thead><tbody id="iocTable"><tr><td colspan="9">Loading indicators…</td></tr></tbody></table></div>
+      </div>
+    </section>
+
+    <section class="panel" id="operations">
+      <div class="section-heading"><div><p class="eyebrow">SOC OPERATIONS</p><h2>Alerts & Incidents</h2><p class="muted">Review alert lifecycle, create incident records and correlate internal events through the API.</p></div><div class="header-actions"><button class="secondary" id="pdfBtn">↓ PDF Report</button><button class="secondary" id="refreshOpsBtn">Refresh Operations</button></div></div>
+      <div class="stats compact-stats">
+        <article class="stat-card"><div class="stat-top"><span>Open Alerts</span></div><strong id="openAlerts">—</strong></article>
+        <article class="stat-card"><div class="stat-top"><span>Open Incidents</span></div><strong id="openIncidents">—</strong></article>
+        <article class="stat-card"><div class="stat-top"><span>Correlated Events</span></div><strong id="correlatedEvents">—</strong></article>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Alert</th><th>Severity</th><th>Status</th><th>Assignee</th><th>Created</th><th>Action</th></tr></thead><tbody id="alertsTable"><tr><td colspan="6">Loading alerts…</td></tr></tbody></table></div>
+      <div class="subsection"><h3>Incident Workspace</h3><form id="incidentForm" class="filters"><input id="incidentTitle" placeholder="Incident title" required><select id="incidentSeverity"><option>low</option><option selected>medium</option><option>high</option><option>critical</option></select><input id="incidentOwner" placeholder="Owner / analyst"><button type="submit">Create Incident</button></form>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Incident</th><th>Severity</th><th>Status</th><th>Owner</th></tr></thead><tbody id="incidentsTable"><tr><td colspan="5">Loading incidents…</td></tr></tbody></table></div></div>
+    </section>
+
+    <section class="panel" id="governance"><div class="section-heading"><div><p class="eyebrow">GOVERNANCE</p><h2>Audit Trail</h2><p class="muted">Recent state-changing actions recorded by the API.</p></div><button class="secondary" id="auditRefreshBtn">Refresh Audit</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Action</th><th>Entity</th><th>Entity ID</th><th>Details</th><th>Timestamp</th></tr></thead><tbody id="auditTable"><tr><td colspan="5">Loading audit log…</td></tr></tbody></table></div>
+    </section>
+    <footer>ThreatLens · Cyber Threat Intelligence Dashboard · Version 1.1.0</footer>
+  </main>
+
+  <div id="editModal" class="modal" hidden>
+    <div class="modal-card"><div class="section-heading"><div><p class="eyebrow">IOC MANAGEMENT</p><h2>Edit Indicator</h2></div><button type="button" class="icon-button" id="closeModal" aria-label="Close">×</button></div>
+      <form id="editForm" class="form-grid">
+        <input type="hidden" id="editId">
+        <label class="field span-2">Indicator value<input id="editIndicator" maxlength="500" required></label>
+        <label class="field">Type<select id="editIndicatorType"><option value="ip">IP Address</option><option value="domain">Domain</option><option value="url">URL</option><option value="hash">File Hash</option><option value="email">Email</option><option value="cve">CVE</option></select></label>
+        <label class="field">Severity<select id="editIndicatorSeverity"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+        <label class="field">Source<input id="editSource" maxlength="100" required></label>
+        <label class="field">Confidence<input id="editConfidence" type="number" min="0" max="100" required></label>
+        <label class="field">TLP<select id="editTlp"><option value="clear">Clear</option><option value="green">Green</option><option value="amber">Amber</option><option value="red">Red</option></select></label>
+        <label class="field">Status<select id="editStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="false_positive">False Positive</option></select></label>
+        <label class="field span-2">Tags (JSON array)<input id="editTags"></label>
+        <label class="field span-2">MITRE ATT&CK IDs (JSON array)<input id="editAttackTechniques"></label>
+        <label class="field span-2">Analyst Notes<textarea id="editAnalystNotes" rows="3"></textarea></label>
+        <div class="form-actions span-2"><button type="submit" id="saveEditBtn">Save Changes</button><button type="button" class="secondary" id="cancelEditBtn">Cancel</button></div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

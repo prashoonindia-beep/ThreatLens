@@ -1,0 +1,14 @@
+services:
+  threatlens:
+    build: .
+    container_name: threatlens
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////data/threatlens.db
+    volumes:
+      - threatlens_data:/data
+    restart: unless-stopped
+
+volumes:
+  threatlens_data:
